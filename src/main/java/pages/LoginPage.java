@@ -47,7 +47,7 @@ public class LoginPage {
     }
 
     public String verifyForgotPasswordLink(){
-//        helper.waitForElementClickable(login_locators.forgot_password_link).click();
+        helper.waitForElementClickable(login_locators.click_forgot_link).click();
         boolean redirected = driver.getCurrentUrl().contains("forgot-password");
         return redirected
                 ? "User is redirected to Forgot Password page"

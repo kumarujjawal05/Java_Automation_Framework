@@ -12,8 +12,10 @@ import org.openqa.selenium.TakesScreenshot;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.chrome.ChromeOptions;
+import org.openqa.selenium.safari.SafariDriver;
 import org.openqa.selenium.edge.EdgeDriver;
 import org.openqa.selenium.edge.EdgeOptions;
+import org.openqa.selenium.safari.SafariOptions;
 import org.testng.ITestResult;
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -73,6 +75,16 @@ public class BrowserConfig {
                     options1.addArguments("--headless");
                 }
                 driver = new EdgeDriver(options1);
+                break;
+
+
+            case "safari":
+                WebDriverManager.safaridriver().setup();
+                SafariOptions options2 = new SafariOptions();
+//                if (isHeadless){
+//                    options2.addArguments("--headless");
+//                }
+                driver = new SafariDriver(options2);
                 break;
 
             default:

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE suite SYSTEM "https://testng.org/testng-1.0.dtd">
+
+<suite name="Parallel Execution Automation Suite" parallel="tests" thread-count="2">
+
+    <test name="Chrome Login And Register Tests">
+        <parameter name="browser" value="chrome"/>
+        <classes>
+            <class name="tests.RegisterANDLoginTest"/>
+        </classes>
+    </test>
+
+    <test name="Safari Login And Register Tests">
+        <parameter name="browser" value="safari"/>
+        <classes>
+            <class name="tests.RegisterANDLoginTest"/>
+        </classes>
+    </test>
+
+
+
+</suite>
