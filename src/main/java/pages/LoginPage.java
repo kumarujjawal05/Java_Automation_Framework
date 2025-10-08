@@ -15,58 +15,37 @@ public class LoginPage {
         this.driver = driver;
     }
 
-    public void performLogin(String username, String password){
-        WebElement usernameField = helper.waitForElementClickable(login_locators.enter_username);
-        usernameField.sendKeys(username);
-        WebElement passwordField = helper.waitForElementClickable(login_locators.enter_password);
-        passwordField.sendKeys(password);
-        WebElement loginButton = helper.waitForElementClickable(login_locators.click_login_button);
-        loginButton.click();
+    public void enterUsername(String username) {
+        if (username == null || username.isEmpty()) {
+            throw new IllegalArgumentException("Username cannot be null or empty");
+        }
+        helper.waitForElementClickable(login_locators.enter_username).sendKeys(username);
     }
 
-    // ✅ Test-case wrappers
-    public String loginWithValidCredentials(){
-        performLogin("validUser", "validPass");
-        boolean dashboardVisible = driver.getCurrentUrl().contains("dashboard")
-                || driver.getPageSource().contains("Welcome");
-        return dashboardVisible ? "User is redirected to the dashboard" : "Login failed";
+    public void enterPassword(String password) {
+        if (password == null || password.isEmpty()) {
+            throw new IllegalArgumentException("Password cannot be null or empty");
+        }
+        helper.waitForElementClickable(login_locators.enter_password).sendKeys(password);
     }
 
-    public String loginWithInvalidCredentials(){
-        performLogin("wrongUser", "wrongPass");
-        boolean errorVisible = driver.getPageSource().contains("Invalid username or password");
-        return errorVisible ? "Error message is displayed" : "No error message displayed";
-    }
-
-    public String loginWithEmptyFields(){
+    public void clickLoginButton() {
         helper.waitForElementClickable(login_locators.click_login_button).click();
-        boolean validationVisible = driver.getPageSource().toLowerCase().contains("required");
-        return validationVisible
-                ? "Validation messages displayed for mandatory fields"
-                : "No validation shown";
     }
 
-    public String verifyForgotPasswordLink(){
+    public void clickForgotPasswordLink() {
         helper.waitForElementClickable(login_locators.click_forgot_link).click();
-        boolean redirected = driver.getCurrentUrl().contains("forgot-password");
-        return redirected
-                ? "User is redirected to Forgot Password page"
-                : "Forgot Password navigation failed";
     }
 
-    public String verifyRememberMeFunctionality(){
-        WebElement usernameField = helper.waitForElementClickable(login_locators.enter_username);
-        usernameField.sendKeys("validUser");
-        WebElement passwordField = helper.waitForElementClickable(login_locators.enter_password);
-        passwordField.sendKeys("validPass");
-//        helper.waitForElementClickable(login_locators.remember_me_checkbox).click();
-        helper.waitForElementClickable(login_locators.click_login_button).click();
-        // simulate logout and revisit
-        driver.navigate().back();
+    public boolean isLoginSuccessful() {
+        return helper.isElementVisible(login_locators.account_overview_title);
+    }
 
-        boolean remembered = usernameField.getAttribute("value").equals("validUser");
-        return remembered
-                ? "User credentials remain saved on next visit"
-                : "Remember Me not working";
+    public boolean isLoginFailed() {
+        return helper.isElementVisible(login_locators.login_error_message);
+    }
+
+    public String getErrorMessage() {
+        return helper.waitForVisibilityofElement(login_locators.login_error_message).getText();
     }
 }

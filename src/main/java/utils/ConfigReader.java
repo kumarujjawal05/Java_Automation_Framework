@@ -6,18 +6,22 @@ import java.util.Properties;
 
 public class ConfigReader {
 
-    private static Properties properties = new Properties();
+    private static Properties properties;
 
     static {
-        try {
-            FileInputStream inputStream = new FileInputStream("src/main/resources/config.properties");
-            properties.load(inputStream);
+        properties = new Properties();
+        try (FileInputStream fis = new FileInputStream("src/main/resources/config.properties")) {
+            properties.load(fis);
         } catch (IOException e) {
-            throw new RuntimeException("Failed to load config.properties file: " + e.getMessage());
+            throw new RuntimeException("Could not read the properties file!", e);
         }
     }
 
     public static String get(String key) {
-        return properties.getProperty(key);
+        String value = properties.getProperty(key);
+        if (value == null) {
+            throw new RuntimeException("Key '" + key + "' not found in config.properties file!");
+        }
+        return value;
     }
 }

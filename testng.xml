@@ -3,6 +3,10 @@
 
 <suite name="Parallel Execution Automation Suite" parallel="tests" thread-count="2">
 
+    <listeners>
+        <listener class-name="utils.TestListener"/>
+    </listeners>
+
     <test name="Chrome Login And Register Tests">
         <parameter name="browser" value="chrome"/>
         <classes>
@@ -16,7 +20,5 @@
             <class name="tests.RegisterANDLoginTest"/>
         </classes>
     </test>
-
-
 
 </suite>
