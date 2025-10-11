@@ -60,7 +60,35 @@ public class RegisterANDLoginTest extends BrowserConfig {
             if (phone == null || phone.isEmpty()) throw new IllegalArgumentException("Phone number cannot be null or empty");
             if (ssn == null || ssn.isEmpty()) throw new IllegalArgumentException("SSN cannot be null or empty");
 
-            if ("Login".equalsIgnoreCase(page)) {
+            if ("Register".equalsIgnoreCase(page)) {
+                registerPage.clickRegisterLink();
+                switch (id) {
+                    case "R01": // Valid Registration
+                        String newUsername = "newuser" + System.currentTimeMillis();
+                        registerPage.fillRegistrationForm(firstName, lastName, street, city, state, zipcode, phone, ssn, newUsername, password, password);
+                        registerPage.clickRegisterButton();
+                        Assert.assertTrue(registerPage.isRegistrationSuccessful(), "Expected successful registration.");
+                        break;
+                    case "R02": // Existing Username
+                        registerPage.fillRegistrationForm(firstName, lastName, street, city, state, zipcode, phone, ssn, username, password, password);
+                        registerPage.clickRegisterButton();
+                        Assert.assertTrue(registerPage.isRegistrationFailed(), "Expected registration to fail for an existing username.");
+                        break;
+                    case "R03": // Mandatory Fields Validation
+                        registerPage.clickRegisterButton(); // Submit empty form
+                        Assert.assertTrue(registerPage.isRegistrationFailed(), "Expected validation errors for mandatory fields.");
+                        break;
+                    case "R04": // Password Mismatch
+                        String mismatchUser = "mismatch" + System.currentTimeMillis();
+                        registerPage.fillRegistrationForm(firstName, lastName, street, city, state, zipcode, phone, ssn, mismatchUser, password, "mismatchedPassword");
+                        registerPage.clickRegisterButton();
+                        Assert.assertTrue(registerPage.isRegistrationFailed(), "Expected registration to fail due to password mismatch.");
+                        break;
+                    default:
+                        extentTest.get().skip("Register test case with ID '" + id + "' not implemented.");
+                        break;
+                }
+            } else if ("Login".equalsIgnoreCase(page)) {
                 switch (id) {
                     case "L01": // Valid Login
                         loginPage.enterUsername(username);
@@ -86,34 +114,7 @@ public class RegisterANDLoginTest extends BrowserConfig {
                         extentTest.get().skip("Login test case with ID '" + id + "' not implemented.");
                         break;
                 }
-            } else if ("Register".equalsIgnoreCase(page)) {
-                registerPage.clickRegisterLink();
-                switch (id) {
-                    case "R01": // Valid Registration
-                        String newUsername = "newuser" + System.currentTimeMillis();
-                        registerPage.fillRegistrationForm(firstName, lastName, street, city, state, zipcode, phone, ssn, newUsername, password, password);
-                        registerPage.clickRegisterButton();
-                        Assert.assertTrue(registerPage.isRegistrationSuccessful(), "Expected successful registration.");
-                        break;
-                    case "R02": // Existing Username
-                        registerPage.fillRegistrationForm(firstName, lastName, street, city, state, zipcode, phone, ssn, username, password, password);
-                        registerPage.clickRegisterButton();
-                        Assert.assertTrue(registerPage.isRegistrationFailed(), "Expected registration to fail for an existing username.");
-                        break;
-                    case "R03": // Mandatory Fields Validation
-                        registerPage.clickRegisterButton(); // Submit empty form
-                        Assert.assertTrue(registerPage.isRegistrationFailed(), "Expected validation errors for mandatory fields.");
-                        break;
-                    case "R05": // Password Mismatch
-                        String mismatchUser = "mismatch" + System.currentTimeMillis();
-                        registerPage.fillRegistrationForm(firstName, lastName, street, city, state, zipcode, phone, ssn, mismatchUser, password, "mismatchedPassword");
-                        registerPage.clickRegisterButton();
-                        Assert.assertTrue(registerPage.isRegistrationFailed(), "Expected registration to fail due to password mismatch.");
-                        break;
-                    default:
-                        extentTest.get().skip("Register test case with ID '" + id + "' not implemented.");
-                        break;
-                }
+
             }
 
             extentTest.get().pass("✅ Passed | " + testCase);

@@ -2,7 +2,6 @@ package pages;
 
 import locators.login_locators;
 import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
 import utils.ElementHelper;
 
 public class LoginPage {
