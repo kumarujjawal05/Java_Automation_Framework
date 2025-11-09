@@ -53,11 +53,12 @@ public class BrowserConfig {
 
     @Parameters("browser")
     @BeforeMethod(alwaysRun = true)
-    public void setupTest(Method method, @Optional("chrome") String browser) {
+    public void setupTest(Method method, @Optional("chrome") String browserParam) {
         if (extent == null) {
             initializeReport();
         }
 
+        String browser = System.getProperty("browser", browserParam);
         String headlessFlag = System.getProperty("headless", "false");
 
         switch (browser.toLowerCase()) {
