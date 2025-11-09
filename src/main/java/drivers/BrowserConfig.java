@@ -17,6 +17,7 @@ import org.openqa.selenium.edge.EdgeOptions;
 import org.openqa.selenium.safari.SafariDriver;
 import org.testng.ITestResult;
 import org.testng.annotations.*;
+
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
@@ -26,7 +27,6 @@ import java.util.Date;
 public class BrowserConfig {
 
     protected WebDriver driver;
-    // make extent public so listeners can write to the same report
     public static ExtentReports extent;
     protected ThreadLocal<ExtentTest> extentTest = new ThreadLocal<>();
 
@@ -54,39 +54,49 @@ public class BrowserConfig {
     @Parameters("browser")
     @BeforeMethod(alwaysRun = true)
     public void setupTest(Method method, @Optional("chrome") String browser) {
-        // Ensure extent is initialized even if @BeforeSuite didn't run in this fork/classloader
         if (extent == null) {
             initializeReport();
         }
+
+        String headlessFlag = System.getProperty("headless", "false");
 
         switch (browser.toLowerCase()) {
             case "chrome":
                 WebDriverManager.chromedriver().setup();
                 ChromeOptions chromeOptions = new ChromeOptions();
-                if (Boolean.parseBoolean(System.getProperty("headless", "false"))) {
-                    chromeOptions.addArguments("--headless");
+                // ✅ Always ensure Jenkins (no-GUI) runs fine
+                if (headlessFlag.equalsIgnoreCase("true")) {
+                    chromeOptions.addArguments("--headless=new");
+                    chromeOptions.addArguments("--no-sandbox");
+                    chromeOptions.addArguments("--disable-dev-shm-usage");
+                    chromeOptions.addArguments("--window-size=1920,1080");
                 }
+                chromeOptions.addArguments("--remote-allow-origins=*");
                 driver = new ChromeDriver(chromeOptions);
                 break;
+
             case "edge":
                 WebDriverManager.edgedriver().setup();
                 EdgeOptions edgeOptions = new EdgeOptions();
-                if (Boolean.parseBoolean(System.getProperty("headless", "false"))) {
-                    edgeOptions.addArguments("--headless");
+                if (headlessFlag.equalsIgnoreCase("true")) {
+                    edgeOptions.addArguments("--headless=new");
+                    edgeOptions.addArguments("--window-size=1920,1080");
                 }
                 driver = new EdgeDriver(edgeOptions);
                 break;
+
             case "safari":
+                // ⚠️ Safari not recommended for Jenkins (no GUI support)
                 driver = new SafariDriver();
                 break;
+
             default:
-                throw new RuntimeException("Browser Not Supported: " + browser);
+                throw new RuntimeException("Unsupported browser: " + browser);
         }
 
         try {
             driver.manage().window().maximize();
         } catch (Exception ignored) {
-            // Some drivers (headless or remote) may not support maximize; ignore gracefully
         }
 
         ExtentTest test = extent.createTest(method.getName() + " - " + browser);
@@ -96,13 +106,14 @@ public class BrowserConfig {
     @AfterMethod(alwaysRun = true)
     public void tearDownTest(ITestResult result) {
         ExtentTest test = extentTest.get();
+        if (test == null) return;
+
         if (result.getStatus() == ITestResult.FAILURE) {
             try {
                 String dirPath = System.getProperty("user.dir") + "/Screenshots";
                 File dir = new File(dirPath);
-                if (!dir.exists()) {
-                    dir.mkdirs();
-                }
+                if (!dir.exists()) dir.mkdirs();
+
                 String timestamp = new SimpleDateFormat("ddMMyyyyHHmmss").format(new Date());
                 String fileName = result.getName() + "_" + timestamp + ".png";
                 String filePath = dirPath + File.separator + fileName;
@@ -111,16 +122,14 @@ public class BrowserConfig {
                 FileUtils.copyFile(srcFile, new File(filePath));
 
                 test.fail("Test Failed: " + result.getThrowable().getMessage(),
-                        MediaEntityBuilder.createScreenCaptureFromPath(new File(filePath).getAbsolutePath()).build());
+                        MediaEntityBuilder.createScreenCaptureFromPath(filePath).build());
             } catch (IOException e) {
-                test.fail("Failed to capture screenshot: " + e.getMessage());
-            } catch (Exception e) {
-                test.fail("Failed to capture screenshot: " + e.getMessage());
+                test.fail("⚠️ Failed to capture screenshot: " + e.getMessage());
             }
         } else if (result.getStatus() == ITestResult.SUCCESS) {
-            if (test != null) test.pass("Test Passed");
+            test.pass("Test Passed");
         } else if (result.getStatus() == ITestResult.SKIP) {
-            if (test != null) test.skip("Test Skipped");
+            test.skip("Test Skipped");
         }
 
         if (driver != null) {
