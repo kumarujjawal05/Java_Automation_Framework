@@ -74,6 +74,8 @@ public class BrowserConfig {
                 }
                 chromeOptions.addArguments("--remote-allow-origins=*");
                 driver = new ChromeDriver(chromeOptions);
+                System.out.println("Running on Chrome | Headless: " + headlessFlag);
+
                 break;
 
             case "edge":
