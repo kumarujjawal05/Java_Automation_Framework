@@ -21,7 +21,7 @@ pipeline {
 
         stage('Run Tests') {
             steps {
-                sh 'mvn test'
+                sh 'mvn clean test -Dbrowser=chrome -Dheadless=true'
             }
         }
 
