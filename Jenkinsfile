@@ -15,20 +15,37 @@ pipeline {
 
         stage('Build') {
             steps {
-                sh 'mvn clean install'
+                echo "Building project..."
+                sh 'mvn clean install -DskipTests'
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'mvn clean test -Dbrowser=chrome -Dheadless=true -DargLine="-Dheadless=true"'
+                echo "Running tests on Chrome in headless mode..."
+                //  Corrected Maven syntax — no need for -DargLine
+                sh 'mvn test -Dbrowser=chrome -Dheadless=true'
             }
         }
 
-        stage('Publish Report') {
+        stage('Publish Reports') {
             steps {
-                junit '**/target/surefire-reports/*.xml'
+                echo "Publishing Surefire XML report..."
+                testng '**/target/surefire-reports/*.xml'
             }
+        }
+    }
+
+    post {
+        always {
+            echo "Publishing Extent HTML Report..."
+            publishHTML([
+                reportDir: 'Reports',
+                reportFiles: 'extent-report.html',
+                reportName: 'Extent Report',
+                keepAll: true,
+                alwaysLinkToLastBuild: true
+            ])
         }
     }
 }
