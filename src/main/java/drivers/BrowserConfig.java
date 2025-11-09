@@ -28,20 +28,25 @@ import java.util.Date;
 public class BrowserConfig {
 
     protected WebDriver driver;
-    protected static ExtentReports extent;
+    // make extent public so listeners can write to the same report
+    public static ExtentReports extent;
     protected ThreadLocal<ExtentTest> extentTest = new ThreadLocal<>();
 
-    @BeforeSuite
+    @BeforeSuite(alwaysRun = true)
     public void initializeReport() {
-        ExtentSparkReporter spark = new ExtentSparkReporter("Reports/extent-report.html");
-        spark.config().setDocumentTitle("Java Automation Testing");
-        spark.config().setReportName("UI Automation Report");
-        spark.config().setTheme(Theme.DARK);
-        extent = new ExtentReports();
-        extent.attachReporter(spark);
+        synchronized (BrowserConfig.class) {
+            if (extent == null) {
+                ExtentSparkReporter spark = new ExtentSparkReporter("Reports/extent-report.html");
+                spark.config().setDocumentTitle("Java Automation Testing");
+                spark.config().setReportName("UI Automation Report");
+                spark.config().setTheme(Theme.DARK);
+                extent = new ExtentReports();
+                extent.attachReporter(spark);
+            }
+        }
     }
 
-    @AfterSuite
+    @AfterSuite(alwaysRun = true)
     public void flushReport() {
         if (extent != null) {
             extent.flush();
@@ -49,8 +54,13 @@ public class BrowserConfig {
     }
 
     @Parameters("browser")
-    @BeforeMethod
+    @BeforeMethod(alwaysRun = true)
     public void setupTest(Method method, @Optional("chrome") String browser) {
+        // Ensure extent is initialized even if @BeforeSuite didn't run in this fork/classloader
+        if (extent == null) {
+            initializeReport();
+        }
+
         switch (browser.toLowerCase()) {
             case "chrome":
                 WebDriverManager.chromedriver().setup();
@@ -75,12 +85,17 @@ public class BrowserConfig {
                 throw new RuntimeException("Browser Not Supported: " + browser);
         }
 
-        driver.manage().window().maximize();
+        try {
+            driver.manage().window().maximize();
+        } catch (Exception ignored) {
+            // Some drivers (headless or remote) may not support maximize; ignore gracefully
+        }
+
         ExtentTest test = extent.createTest(method.getName() + " - " + browser);
         extentTest.set(test);
     }
 
-    @AfterMethod
+    @AfterMethod(alwaysRun = true)
     public void tearDownTest(ITestResult result) {
         ExtentTest test = extentTest.get();
         if (result.getStatus() == ITestResult.FAILURE) {
@@ -101,15 +116,20 @@ public class BrowserConfig {
                         MediaEntityBuilder.createScreenCaptureFromPath(new File(filePath).getAbsolutePath()).build());
             } catch (IOException e) {
                 test.fail("Failed to capture screenshot: " + e.getMessage());
+            } catch (Exception e) {
+                test.fail("Failed to capture screenshot: " + e.getMessage());
             }
         } else if (result.getStatus() == ITestResult.SUCCESS) {
-            test.pass("Test Passed");
+            if (test != null) test.pass("Test Passed");
         } else if (result.getStatus() == ITestResult.SKIP) {
-            test.skip("Test Skipped");
+            if (test != null) test.skip("Test Skipped");
         }
 
         if (driver != null) {
-            driver.quit();
+            try {
+                driver.quit();
+            } catch (Exception ignored) {
+            }
         }
     }
 }

@@ -9,8 +9,13 @@ import org.jacoco.core.tools.ExecFileLoader;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jacoco.core.analysis.ICounter;
+import com.aventstack.extentreports.ExtentTest;
+import com.aventstack.extentreports.Status;
+import drivers.BrowserConfig;
 
 import java.io.File;
+import java.io.FileWriter;
+import java.io.PrintWriter;
 
 public class TestListener implements ITestListener {
 
@@ -36,6 +41,60 @@ public class TestListener implements ITestListener {
         System.out.println("Failed Tests: " + failedTests);
         System.out.println("Skipped Tests: " + skippedTests);
         System.out.println("--------------------------------------------------");
+
+        // Generate coverage summary after tests complete (jacoco.exec is created by the agent)
+        try {
+            File execFile = new File("target/jacoco.exec");
+            if (!execFile.exists()) {
+                logger.warn("Jacoco exec file not found at target/jacoco.exec. Run 'mvn clean verify' to produce coverage.");
+                return;
+            }
+
+            ExecFileLoader loader = new ExecFileLoader();
+            loader.load(execFile);
+
+            CoverageBuilder coverageBuilder = new CoverageBuilder();
+            Analyzer analyzer = new Analyzer(loader.getExecutionDataStore(), coverageBuilder);
+            analyzer.analyzeAll(new File("target/classes"));
+
+            File out = new File("target/jacoco-summary.txt");
+            try (PrintWriter pw = new PrintWriter(new FileWriter(out))) {
+                pw.println("Coverage Summary:");
+
+                // also prepare Extent test if available
+                final com.aventstack.extentreports.ExtentTest coverageTest = (BrowserConfig.extent != null)
+                        ? BrowserConfig.extent.createTest("Coverage Summary")
+                        : null;
+
+                coverageBuilder.getClasses().forEach(cls -> {
+                    try {
+                        ICounter instructionCounter = cls.getInstructionCounter();
+                        long total = instructionCounter.getTotalCount();
+                        long covered = instructionCounter.getCoveredCount();
+                        double coverage = total == 0 ? 0.0 : (double) covered / total * 100.0;
+                        String line = String.format("%s : %.2f%% (%d/%d)", cls.getName(), coverage, covered, total);
+                        pw.println(line);
+                        logger.info(line);
+                        if (coverageTest != null) {
+                            coverageTest.log(Status.INFO, line);
+                        }
+                    } catch (Exception e) {
+                        logger.error("Error reading coverage for class: " + cls.getName(), e);
+                    }
+                });
+
+                if (coverageTest != null) {
+                    coverageTest.log(Status.PASS, "Coverage summary written to target/jacoco-summary.txt");
+                }
+            }
+
+            logger.info("Jacoco coverage summary written to target/jacoco-summary.txt");
+        } catch (Exception e) {
+            logger.error("Error calculating coverage data", e);
+            if (BrowserConfig.extent != null) {
+                BrowserConfig.extent.createTest("Coverage Summary").log(Status.FAIL, "Error calculating coverage data: " + e.getMessage());
+            }
+        }
     }
 
     @Override
@@ -46,13 +105,13 @@ public class TestListener implements ITestListener {
     @Override
     public void onTestSuccess(ITestResult result) {
         passedTests++;
-        addCoverageData(result);
+        // coverage will be computed at the end of suite (onFinish)
     }
 
     @Override
     public void onTestFailure(ITestResult result) {
         failedTests++;
-        addCoverageData(result);
+        // coverage will be computed at the end of suite (onFinish)
     }
 
     @Override
@@ -63,29 +122,5 @@ public class TestListener implements ITestListener {
     @Override
     public void onTestFailedButWithinSuccessPercentage(ITestResult result) {
         // Not implemented
-    }
-
-    private void addCoverageData(ITestResult result) {
-        try {
-            File execFile = new File("target/jacoco.exec");
-            ExecFileLoader loader = new ExecFileLoader();
-            loader.load(execFile);
-
-            CoverageBuilder coverageBuilder = new CoverageBuilder();
-            Analyzer analyzer = new Analyzer(loader.getExecutionDataStore(), coverageBuilder);
-            analyzer.analyzeAll(new File("target/classes"));
-
-            coverageBuilder.getClasses().forEach(cls -> {
-                if (cls.getName().contains(result.getTestClass().getName())) {
-                    ICounter instructionCounter = cls.getInstructionCounter();
-                    double coverage = (double) instructionCounter.getCoveredCount() / instructionCounter.getTotalCount() * 100;
-                    logger.info("Coverage for {}: {}%", result.getName(), coverage);
-                    // Add to Extent Report
-                    // extentTest.get().log(Status.INFO, "Coverage: " + coverage + "%");
-                }
-            });
-        } catch (Exception e) {
-            logger.error("Error calculating coverage data", e);
-        }
     }
 }

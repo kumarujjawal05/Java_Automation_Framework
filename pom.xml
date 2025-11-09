@@ -13,6 +13,8 @@
         <maven.compiler.target>17</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <log4j.version>2.22.0</log4j.version>
+        <!-- default argLine (will be overridden by jacoco:prepare-agent at build time) -->
+        <argLine></argLine>
     </properties>
 
     <dependencies>
@@ -49,6 +51,7 @@
                     <groupId>org.bouncycastle</groupId>
                     <artifactId>bcprov-jdk18on</artifactId>
                 </exclusion>
+                <!-- commons-lang3 excluded from transitive, adding explicit dependency below -->
                 <exclusion>
                     <groupId>org.apache.commons</groupId>
                     <artifactId>commons-lang3</artifactId>
@@ -144,6 +147,8 @@
                     <suiteXmlFiles>
                         <suiteXmlFile>testng.xml</suiteXmlFile>
                     </suiteXmlFiles>
+                    <!-- Include JaCoCo agent argLine so tests run with the agent when prepare-agent sets it -->
+                    <argLine>${argLine}</argLine>
                 </configuration>
             </plugin>
 
@@ -155,13 +160,15 @@
                 <executions>
                     <execution>
                         <id>prepare-agent</id>
+                        <phase>initialize</phase>
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
                     </execution>
                     <execution>
                         <id>report</id>
-                        <phase>test</phase>
+                        <!-- Run report during verify so that surefire has finished and the exec file is written -->
+                        <phase>verify</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>
